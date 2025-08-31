@@ -1,0 +1,41 @@
+{
+  "name": "indian-stocks-tracker",
+  "version": "1.0.0",
+  "description": "Real-time Indian stocks tracker comparing performance against Nifty 50 benchmark",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "axios": "^1.6.0",
+    "recharts": "^2.8.0",
+    "lucide-react": "^0.294.0",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.15",
+    "@vitejs/plugin-react": "^4.1.1",
+    "vite": "^4.5.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.5"
+  },
+  "keywords": [
+    "stocks",
+    "nifty50",
+    "indian-market",
+    "finance-tracker",
+    "real-time"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
