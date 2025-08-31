@@ -1,20 +1,12 @@
-// API service for SerpApi Google Finance
-// You'll need to get your API key from https://serpapi.com/
+// API service for Indian Stocks Tracker
+// This service calls our backend server which handles the SerpApi integration
 
-const SERPAPI_KEY = process.env.REACT_APP_SERPAPI_KEY || 'YOUR_SERPAPI_KEY_HERE'
-const BASE_URL = 'https://serpapi.com/search.json'
+const BACKEND_URL = 'http://localhost:3001'
 
-// Helper function to make API calls
-const makeApiCall = async (params) => {
+// Helper function to make API calls to our backend
+const makeApiCall = async (endpoint) => {
   try {
-    const queryParams = new URLSearchParams({
-      ...params,
-      api_key: SERPAPI_KEY,
-      hl: 'en',
-      gl: 'in'
-    })
-
-    const response = await fetch(`${BASE_URL}?${queryParams}`)
+    const response = await fetch(`${BACKEND_URL}${endpoint}`)
     
     if (!response.ok) {
       throw new Error(`API request failed: ${response.status}`)
@@ -22,11 +14,11 @@ const makeApiCall = async (params) => {
 
     const data = await response.json()
     
-    if (data.error) {
-      throw new Error(data.error)
+    if (!data.success) {
+      throw new Error(data.error || 'API request failed')
     }
 
-    return data
+    return data.data
   } catch (error) {
     console.error('API call error:', error)
     throw new Error(`Failed to fetch data: ${error.message}`)
@@ -36,26 +28,7 @@ const makeApiCall = async (params) => {
 // Fetch Nifty 50 benchmark data
 export const fetchNiftyData = async () => {
   try {
-    const data = await makeApiCall({
-      engine: 'google_finance',
-      q: 'NIFTY50:INDEXNIFTY'
-    })
-
-    // Extract relevant data from the response
-    const summary = data.summary
-    if (!summary) {
-      throw new Error('No summary data found for Nifty 50')
-    }
-
-    return {
-      price: summary.extracted_price || summary.price,
-      price_movement: summary.price_movement,
-      market_cap: summary.market_cap,
-      volume: summary.volume,
-      currency: summary.currency || 'INR',
-      exchange: summary.exchange,
-      last_updated: new Date().toISOString()
-    }
+    return await makeApiCall('/api/nifty')
   } catch (error) {
     console.error('Error fetching Nifty data:', error)
     // Return mock data for development/testing
@@ -77,29 +50,7 @@ export const fetchNiftyData = async () => {
 // Fetch individual stock data
 export const fetchStockData = async (symbol) => {
   try {
-    // For Indian stocks, we need to append :NSE to get NSE data
-    const searchQuery = `${symbol}:NSE`
-    
-    const data = await makeApiCall({
-      engine: 'google_finance',
-      q: searchQuery
-    })
-
-    // Extract relevant data from the response
-    const summary = data.summary
-    if (!summary) {
-      throw new Error(`No summary data found for ${symbol}`)
-    }
-
-    return {
-      price: summary.extracted_price || summary.price,
-      price_movement: summary.price_movement,
-      market_cap: summary.market_cap,
-      volume: summary.volume,
-      currency: summary.currency || 'INR',
-      exchange: summary.exchange || 'NSE',
-      last_updated: new Date().toISOString()
-    }
+    return await makeApiCall(`/api/stock/${symbol}`)
   } catch (error) {
     console.error(`Error fetching stock data for ${symbol}:`, error)
     
@@ -120,49 +71,74 @@ export const fetchStockData = async (symbol) => {
   }
 }
 
-// Fetch historical data for charts (optional)
-export const fetchHistoricalData = async (symbol, window = '1M') => {
+// Add stock to tracking
+export const addStock = async (symbol, name) => {
   try {
-    const data = await makeApiCall({
-      engine: 'google_finance',
-      q: `${symbol}:NSE`,
-      window: window
+    const response = await fetch(`${BACKEND_URL}/api/stock`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ symbol, name })
     })
+    
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`)
+    }
 
-    return data.graph || []
+    const data = await response.json()
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to add stock')
+    }
+
+    return data.data
   } catch (error) {
-    console.error(`Error fetching historical data for ${symbol}:`, error)
+    console.error('Error adding stock:', error)
+    throw new Error(`Failed to add stock: ${error.message}`)
+  }
+}
+
+// Remove stock from tracking
+export const removeStock = async (symbol) => {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/stock/${symbol}`, {
+      method: 'DELETE'
+    })
+    
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`)
+    }
+
+    const data = await response.json()
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to remove stock')
+    }
+
+    return true
+  } catch (error) {
+    console.error('Error removing stock:', error)
+    throw new Error(`Failed to remove stock: ${error.message}`)
+  }
+}
+
+// Get all tracked stocks
+export const getTrackedStocks = async () => {
+  try {
+    return await makeApiCall('/api/stocks')
+  } catch (error) {
+    console.error('Error fetching tracked stocks:', error)
     return []
   }
 }
 
-// Search for stocks by name
-export const searchStocks = async (query) => {
+// Manual refresh data
+export const refreshData = async () => {
   try {
-    const data = await makeApiCall({
-      engine: 'google_finance',
-      q: query
-    })
-
-    // Extract search suggestions or results
-    return data.related_searches || []
+    return await makeApiCall('/api/refresh')
   } catch (error) {
-    console.error('Error searching stocks:', error)
-    return []
-  }
-}
-
-// Get market overview
-export const getMarketOverview = async () => {
-  try {
-    const data = await makeApiCall({
-      engine: 'google_finance',
-      q: 'Indian stock market'
-    })
-
-    return data
-  } catch (error) {
-    console.error('Error fetching market overview:', error)
-    return null
+    console.error('Error refreshing data:', error)
+    throw new Error(`Failed to refresh data: ${error.message}`)
   }
 }
