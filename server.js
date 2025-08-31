@@ -56,18 +56,34 @@ const fetchNiftyData = async () => {
       q: 'NIFTY50:INDEXNIFTY'
     })
 
-    const summary = data.summary
-    if (!summary) {
-      throw new Error('No summary data found for Nifty 50')
+    // The API response structure has markets data, not summary
+    // Look for NIFTY_50:INDEXNSE in the markets section
+    let niftyData = null
+    
+    if (data.markets) {
+      // Search through all market sections for NIFTY 50
+      for (const marketSection of Object.values(data.markets)) {
+        if (Array.isArray(marketSection)) {
+          niftyData = marketSection.find(item => 
+            item.stock === 'NIFTY_50:INDEXNSE' || 
+            item.name === 'NIFTY 50'
+          )
+          if (niftyData) break
+        }
+      }
+    }
+
+    if (!niftyData) {
+      throw new Error('No Nifty 50 data found in API response')
     }
 
     return {
-      price: summary.extracted_price || summary.price,
-      price_movement: summary.price_movement,
-      market_cap: summary.market_cap,
-      volume: summary.volume,
-      currency: summary.currency || 'INR',
-      exchange: summary.exchange,
+      price: niftyData.price || 0,
+      price_movement: niftyData.price_movement || { percentage: 0, movement: 'Neutral' },
+      market_cap: niftyData.market_cap || 0,
+      volume: niftyData.volume || 0,
+      currency: 'INR',
+      exchange: 'NSE',
       last_updated: new Date().toISOString()
     }
   } catch (error) {
@@ -98,18 +114,34 @@ const fetchStockData = async (symbol) => {
       q: searchQuery
     })
 
-    const summary = data.summary
-    if (!summary) {
-      throw new Error(`No summary data found for ${symbol}`)
+    // The API response structure has markets data, not summary
+    // Look for the stock in the markets section
+    let stockData = null
+    
+    if (data.markets) {
+      // Search through all market sections for the stock
+      for (const marketSection of Object.values(data.markets)) {
+        if (Array.isArray(marketSection)) {
+          stockData = marketSection.find(item => 
+            item.stock === searchQuery || 
+            item.name && item.name.toLowerCase().includes(symbol.toLowerCase())
+          )
+          if (stockData) break
+        }
+      }
+    }
+
+    if (!stockData) {
+      throw new Error(`No stock data found for ${symbol}`)
     }
 
     return {
-      price: summary.extracted_price || summary.price,
-      price_movement: summary.price_movement,
-      market_cap: summary.market_cap,
-      volume: summary.volume,
-      currency: summary.currency || 'INR',
-      exchange: summary.exchange || 'NSE',
+      price: stockData.price || 0,
+      price_movement: stockData.price_movement || { percentage: 0, movement: 'Neutral' },
+      market_cap: stockData.market_cap || 0,
+      volume: stockData.volume || 0,
+      currency: 'INR',
+      exchange: 'NSE',
       last_updated: new Date().toISOString()
     }
   } catch (error) {
